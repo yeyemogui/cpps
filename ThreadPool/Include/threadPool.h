@@ -56,13 +56,13 @@ namespace thread_pool {
         }
 
         template<typename R, typename T, typename... Types>
-        auto submit(R (T::*f)(Types...), T&& object, Types... args) {
+        auto submit(R (T::*f)(Types...), T object, Types... args) {
             auto func = std::bind(f, object, args...);
             return submitWrapper<R>(func);
         }
 
         template<typename R, typename T>
-        auto submit(R (T::*f)(), T&& object) {
+        auto submit(R (T::*f)(), T object) {
             return submitWrapper<R>([&object, f] { return (object.*f)(); });
         }
 
@@ -80,10 +80,16 @@ namespace thread_pool {
             return submitWrapper<R>([p = std::move(smartPtr)]{return p->operator()();});
         }
 
+        template<typename F>
+        auto submit(F f)
+        {
+            return submitWrapper<void>(f);
+        }
+
         void stop() {
             done_ = true;
             std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
-            submit(&threadPool::stop, std::forward<threadPool>(*this));
+            submit([this]{this->stop();});
         }
     };
 }

@@ -17,9 +17,11 @@ int main() {
     thread_pool::threadPool pool(thread_pool::thread_queue::thread_queue_factory::create_safe_queue(), 10);
     test tt;
     int i = 1;
-    while(i < 50000)
+    while(i < 999999)
     {
-        pool.submit(&test::print, std::forward<test>(tt), i++);
+        pool.submit(&test::print, tt, i++);
     }
+    auto res = pool.submit(&test::print,tt, i);
+    res.get();
     return 0;
 }
