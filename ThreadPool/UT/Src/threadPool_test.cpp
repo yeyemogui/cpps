@@ -13,7 +13,7 @@ class MockTask
 {
 public:
     MockTask() = default;
-    MockTask(const MockTask& other) = delete;
+    MockTask(const MockTask& other) {};
     MOCK_METHOD0(run, int());
 };
 
@@ -32,7 +32,7 @@ TEST(thread_pool_test, test_submit_objMethod)
     thread_pool::threadPool pool(std::move(queue));
     MockTask task;
     EXPECT_CALL(task, run()).Times(1).WillRepeatedly(::testing::Return(5));
-    auto res = pool.submit(&MockTask::run, std::forward<MockTask>(task));
+    auto res = pool.submit<int>([&task]{return task.run();});
     ASSERT_EQ(res.get(), 5);
 }
 

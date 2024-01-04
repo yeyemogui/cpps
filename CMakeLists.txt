@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(demo)
 message(STATUS "CMAKE_SYSTEM_NAME = '${CMAKE_SYSTEM_NAME}'")
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 	set(CMAKE_CXX_FLAGS "-g")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-
+	add_definitions(-DDARWIN)
 endif()
 
 add_executable(${PROJECT_NAME} main.cc

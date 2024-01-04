@@ -12,6 +12,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     include_directories(${GTEST_INCLUDE_DIRS})
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories("/usr/local/include")
+    add_definitions(-DDARWIN)
 endif()
 set(CMAKE_CXX_FLAGS "-g")
 add_executable(${PROJECT_NAME} UT/main.cc

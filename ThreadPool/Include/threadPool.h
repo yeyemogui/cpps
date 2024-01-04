@@ -8,6 +8,7 @@
 #include "function_wrapper.h"
 #include <future>
 #include <algorithm>
+#include <execution>
 namespace thread_pool {
     class threadPool {
     private:
@@ -47,11 +48,11 @@ namespace thread_pool {
 
         ~threadPool() {
             stop();
-            for (auto &thread: threads_) {
-                if (thread.joinable()) {
-                    thread.join();
-                }
-            }
+#ifdef DARWIN
+            std::for_each(threads_.begin(), threads_.end(), std::mem_fn(&std::thread::join));
+#else
+            std::for_each(std::execution::par, threads_.begin(), threads_.end(), std::mem_fn(&std::thread::join));
+#endif
             std::cout << "All threads in pool are stopped" << std::endl;
         }
 
@@ -81,15 +82,30 @@ namespace thread_pool {
         }
 
         template<typename F>
+<<<<<<< HEAD
         auto submit(F f)
         {
             return submitWrapper<void>(f);
         }
+=======
+        auto submit(F f) {
+            return submitWrapper<void>(f);
+        }
+        template<typename R>
+        auto submit(std::function<R()> f)
+        {
+            return submitWrapper<R>(f);
+        }
+>>>>>>> de11e0f (v0.012)
 
         void stop() {
             done_ = true;
             std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
+<<<<<<< HEAD
             submit([this]{this->stop();});
+=======
+            submit<void>([this]{this->stop();});
+>>>>>>> de11e0f (v0.012)
         }
     };
 }
