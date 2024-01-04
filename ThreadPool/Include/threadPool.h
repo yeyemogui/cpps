@@ -82,30 +82,21 @@ namespace thread_pool {
         }
 
         template<typename F>
-<<<<<<< HEAD
         auto submit(F f)
         {
             return submitWrapper<void>(f);
         }
-=======
-        auto submit(F f) {
-            return submitWrapper<void>(f);
-        }
+
         template<typename R>
         auto submit(std::function<R()> f)
         {
             return submitWrapper<R>(f);
         }
->>>>>>> de11e0f (v0.012)
 
         void stop() {
             done_ = true;
             std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
-<<<<<<< HEAD
-            submit([this]{this->stop();});
-=======
             submit<void>([this]{this->stop();});
->>>>>>> de11e0f (v0.012)
         }
     };
 }
