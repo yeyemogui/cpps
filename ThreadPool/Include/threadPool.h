@@ -48,11 +48,20 @@ namespace thread_pool {
 
         ~threadPool() {
             stop();
+            /* this is not good, because sometimes exception get thrown, need to judge joinable before join
 #ifdef DARWIN
             std::for_each(threads_.begin(), threads_.end(), std::mem_fn(&std::thread::join));
 #else
             std::for_each(std::execution::par, threads_.begin(), threads_.end(), std::mem_fn(&std::thread::join));
 #endif
+             */
+            for(auto& thread : threads_)
+            {
+                if(thread.joinable())
+                {
+                    thread.join();
+                }
+            }
             std::cout << "All threads in pool are stopped" << std::endl;
         }
 
