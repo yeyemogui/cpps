@@ -9,6 +9,7 @@
 #include <future>
 #include <algorithm>
 #include <execution>
+#include "exceptions.h"
 namespace thread_pool {
     class threadPool {
     private:
@@ -34,7 +35,7 @@ namespace thread_pool {
 
     public:
         explicit threadPool(std::unique_ptr<thread_queue::thread_queue_base<function_wrapper>> queue, unsigned int threadNum = 0) : work_queue_(std::move(queue)), done_(false) {
-            threadNum_ = threadNum == 0 ? std::thread::hardware_concurrency() : threadNum;
+            threadNum_ = std::min(threadNum, std::thread::hardware_concurrency());
             try {
                 for (unsigned int i = 0; i < threadNum_; i++) {
                     threads_.emplace_back(&threadPool::worker, this);
@@ -106,6 +107,18 @@ namespace thread_pool {
             done_ = true;
             std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
             submit<void>([this]{this->stop();});
+        }
+
+        void run_pending_task()
+        {
+            auto task = work_queue_->try_pop();
+            if(task && !done_)
+            {
+                task->run();
+            }
+            else {
+                throw EmptyPool();
+            }
         }
     };
 }

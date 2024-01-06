@@ -19,6 +19,7 @@ add_executable(${PROJECT_NAME} UT/main.cc
         UT/Src/thread_queue_safe_test.cc
         UT/Src/function_wrapper_test.cc
         UT/Src/threadPool_test.cpp
-        Include/threadPool.h)
+        Include/threadPool.h
+        Include/exceptions.h)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${GTEST_LIBRARIES} GTest::gmock)

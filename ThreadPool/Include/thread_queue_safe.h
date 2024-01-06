@@ -59,6 +59,19 @@ namespace thread_pool {
                 return std::move(old_head->data);
             }
 
+            std::unique_ptr<T> try_pop() override
+            {
+                std::lock_guard<std::mutex> head_lock(head_mutex);
+                if(head.get() != get_tail())
+                {
+                    return std::move(pop_head()->data);
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
+
             void push(T &&new_value) override
             {
                 auto data = std::make_unique<T>(std::move(new_value));

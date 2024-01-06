@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(demo)
 message(STATUS "CMAKE_SYSTEM_NAME = '${CMAKE_SYSTEM_NAME}'")
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_COMPILER "/usr/bin/g++")
