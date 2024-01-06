@@ -109,7 +109,7 @@ namespace thread_pool {
             submit<void>([this]{this->stop();});
         }
 
-        void run_pending_task()
+        void run_pending_task_v1()
         {
             auto task = work_queue_->try_pop();
             if(task && !done_)
@@ -119,6 +119,17 @@ namespace thread_pool {
             else {
                 throw EmptyPool();
             }
+        }
+
+        bool run_pending_task_v2()
+        {
+            auto task = work_queue_->try_pop();
+            if(task && !done_)
+            {
+                task->run();
+                return true;
+            }
+            return false; //note, it is up to application to perform yield or not when receiving false
         }
     };
 }

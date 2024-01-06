@@ -52,7 +52,7 @@ TEST(thread_pool_test, test_run_pending_task)
     thread_pool::threadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
-    pool.run_pending_task();
+    pool.run_pending_task_v1();
     ASSERT_EQ(res.get(), 50);
 }
 
@@ -62,7 +62,10 @@ TEST(thread_pool_test, test_run_pending_task_exception)
     thread_pool::threadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
-    pool.run_pending_task();
+    auto ret = pool.run_pending_task_v2();
     ASSERT_EQ(res.get(), 50);
-    ASSERT_THROW(pool.run_pending_task(), EmptyPool);
+    ASSERT_EQ(ret, true);
+    ASSERT_THROW(pool.run_pending_task_v1(), EmptyPool);
+    ret = pool.run_pending_task_v2();
+    ASSERT_EQ(ret, false);
 }
