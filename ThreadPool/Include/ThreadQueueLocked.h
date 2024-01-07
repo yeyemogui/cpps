@@ -1,13 +1,13 @@
-#ifndef DEMO_THREAD_QUEUE_SAFE_H
-#define DEMO_THREAD_QUEUE_SAFE_H
+#ifndef DEMO_THREADQUEUELOCKED_H
+#define DEMO_THREADQUEUELOCKED_H
 
 #include <mutex>
 #include <condition_variable>
-#include "thread_queue_base.h"
+#include "DataContainerBase.h"
 namespace thread_pool {
     namespace thread_queue {
         template<typename T>
-        class thread_queue_safe: public thread_queue_base<T>{
+        class ThreadQueueLocked: public DataContainerBase<T>{
         private:
             struct node {
                 std::unique_ptr <T> data;
@@ -47,11 +47,11 @@ namespace thread_pool {
             }
 
         public:
-            thread_queue_safe() : head(new node), tail(head.get()), m_size(0), thread_queue_base<T>() {}
+            ThreadQueueLocked() : head(new node), tail(head.get()), m_size(0), DataContainerBase<T>() {}
 
-            thread_queue_safe(const thread_queue_safe &other) = delete;
+            ThreadQueueLocked(const ThreadQueueLocked &other) = delete;
 
-            thread_queue_safe &operator=(const thread_queue_safe &other) = delete;
+            ThreadQueueLocked &operator=(const ThreadQueueLocked &other) = delete;
 
             std::unique_ptr<T> wait_and_pop() override
             {
@@ -97,14 +97,14 @@ namespace thread_pool {
                 }
             }
 
-            unsigned int size() override
+            /*unsigned int size() override
             {
                 return m_size;
-            }
-            virtual ~thread_queue_safe() {
+            }*/
+            virtual ~ThreadQueueLocked() {
                 clear();
             }
         };
     }
 }
-#endif //DEMO_THREAD_QUEUE_SAFE_H
+#endif //DEMO_THREADQUEUELOCKED_H

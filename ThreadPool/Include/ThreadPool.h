@@ -4,24 +4,26 @@
 
 #ifndef DEMO_THREADPOOL_H
 #define DEMO_THREADPOOL_H
-#include "thread_queue_safe.h"
+#include "ThreadQueueLocked.h"
 #include "function_wrapper.h"
 #include <future>
 #include <algorithm>
 #include <execution>
 #include "exceptions.h"
 namespace thread_pool {
-    class threadPool {
+    class ThreadPool {
     private:
-        std::unique_ptr<thread_queue::thread_queue_base<function_wrapper>> work_queue_;
+        std::unique_ptr<DataContainerBase<function_wrapper>> work_queue_;
         std::atomic<bool> done_ = false;
         std::vector <std::thread> threads_;
         unsigned int threadNum_;
 
         void worker() {
             while (!done_) {
-                auto task = work_queue_->wait_and_pop();
-                task->run();
+                //auto task = work_queue_->wait_and_pop();
+                //task->run();
+                if(!run_pending_task_v2())
+                    std::this_thread::yield();
             }
         }
 
@@ -34,11 +36,11 @@ namespace thread_pool {
         }
 
     public:
-        explicit threadPool(std::unique_ptr<thread_queue::thread_queue_base<function_wrapper>> queue, unsigned int threadNum = 0) : work_queue_(std::move(queue)), done_(false) {
+        explicit ThreadPool(std::unique_ptr<DataContainerBase<function_wrapper>> queue, unsigned int threadNum = 0) : work_queue_(std::move(queue)), done_(false) {
             threadNum_ = std::min(threadNum, std::thread::hardware_concurrency());
             try {
                 for (unsigned int i = 0; i < threadNum_; i++) {
-                    threads_.emplace_back(&threadPool::worker, this);
+                    threads_.emplace_back(&ThreadPool::worker, this);
                 }
             }
             catch (...) {
@@ -47,7 +49,7 @@ namespace thread_pool {
             }
         }
 
-        ~threadPool() {
+        ~ThreadPool() {
             stop();
             /* this is not good, because sometimes exception get thrown, need to judge joinable before join
 #ifdef DARWIN
@@ -67,13 +69,13 @@ namespace thread_pool {
         }
 
         template<typename R, typename T, typename... Types>
-        auto submit(R (T::*f)(Types...), T object, Types... args) {
+        auto submit(R (T::*f)(Types...), T object, Types... args) -> std::future<R> {
             auto func = std::bind(f, object, args...);
             return submitWrapper<R>(func);
         }
 
         template<typename R, typename T>
-        auto submit(R (T::*f)(), T object) {
+        auto submit(R (T::*f)(), T object) -> std::future<R> {
             return submitWrapper<R>([&object, f] { return (object.*f)(); });
         }
 
@@ -85,20 +87,20 @@ namespace thread_pool {
         struct isSmartPtr<std::shared_ptr<T>>: public std::true_type {};
 
         template<typename R, typename T, typename = std::enable_if_t<isSmartPtr<T>::value>>
-        auto submit(T smartPtr)
+        auto submit(T smartPtr) -> std::future<R>
         {
             T p;
             return submitWrapper<R>([p = std::move(smartPtr)]{return p->operator()();});
         }
 
         template<typename F>
-        auto submit(F f)
+        auto submit(F f) -> std::future<void>
         {
             return submitWrapper<void>(f);
         }
 
         template<typename R>
-        auto submit(std::function<R()> f)
+        auto submit(std::function<R()> f) -> std::future<R>
         {
             return submitWrapper<R>(f);
         }

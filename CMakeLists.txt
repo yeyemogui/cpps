@@ -12,9 +12,11 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 add_executable(${PROJECT_NAME} main.cc
-		ThreadPool/Include/threadPool.h
+		ThreadPool/Include/ThreadPool.h
 		ThreadPool/Include/Functor.h
-		ThreadPool/Include/thread_queue_safe.h
+		ThreadPool/Include/ThreadQueueLocked.h
 		ThreadPool/Include/function_wrapper.h
-		ThreadPool/Include/thread_queue_base.h
-		ThreadPool/Include/thread_queue_factory.h)
+		ThreadPool/Include/DataContainerBase.h
+		ThreadPool/Include/DataContainerFactory.h
+		Sort/Include/quick_sort.h
+		ThreadPool/Include/ThreadStackLocked.h)

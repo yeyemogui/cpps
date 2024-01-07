@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ThreadPoolTest)
+project(SortTest)
 message(STATUS "CMAKE_SYSTEM_NAME = '${CMAKE_SYSTEM_NAME}'")
 set(CMAKE_CXX_STANDARD 17)
 
@@ -15,11 +15,10 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_definitions(-DDARWIN)
 endif()
 set(CMAKE_CXX_FLAGS "-g")
-add_executable(${PROJECT_NAME} UT/main.cc
-        UT/Src/thread_queue_safe_test.cc
-        UT/Src/function_wrapper_test.cc
-        UT/Src/threadPool_test.cpp
-        Include/ThreadPool.h
-        Include/exceptions.h)
+add_executable(${PROJECT_NAME} main.cc
+        ../Include/quick_sort.h
+        Src/quick_sort_test.cc
+        ../Include/quick_sort.h
+        ../Include/quick_sort.h)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${GTEST_LIBRARIES} GTest::gmock)

@@ -3,11 +3,11 @@
 //
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "../../Include/thread_queue_safe.h"
+#include "../../Include/ThreadQueueLocked.h"
 class thread_queue_safe_test: public testing::Test
 {
 protected:
-    thread_pool::thread_queue::thread_queue_safe<int> m_queue;
+    thread_pool::thread_queue::ThreadQueueLocked<int> m_queue;
 };
 
 TEST_F(thread_queue_safe_test, test_push)
