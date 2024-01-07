@@ -10,7 +10,7 @@ int main() {
     sort::QuickSort sorter(11);
     std::list<int> data;
     std::default_random_engine  e;
-    const auto total = 8000;
+    const auto total = 30000;
     std::uniform_int_distribution<int> u(0, total);
     auto start_time = std::chrono::high_resolution_clock::now();
     for(auto i = 0; i < total; i++)
