@@ -10,7 +10,7 @@ int main() {
     sort::QuickSort sorter(11);
     std::list<int> data;
     std::default_random_engine  e;
-    const auto total = 30000;
+    const auto total = 10000000;
     std::uniform_int_distribution<int> u(0, total);
     auto start_time = std::chrono::high_resolution_clock::now();
     for(auto i = 0; i < total; i++)
@@ -21,18 +21,16 @@ int main() {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
     std::cout << "used " << duration << " ms to create source data" << std::endl;
 
-
+    start_time = std::chrono::high_resolution_clock::now();
     auto res = sorter.do_sort(data);
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "used " << duration << " ms to sort data" << std::endl;
+    std::cout << "We used " << duration << " ms to sort data" << std::endl;
 
     start_time = std::chrono::high_resolution_clock::now();
     data.sort();
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "used " << duration << " ms to sort data" << std::endl;
-
-    start_time = std::chrono::high_resolution_clock::now();
+    std::cout << "STD used " << duration << " ms to sort data" << std::endl;
     return 0;
 }

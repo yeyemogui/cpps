@@ -13,16 +13,22 @@
 namespace thread_pool {
     class ThreadPool {
     private:
-        std::unique_ptr<DataContainerBase<function_wrapper>> work_queue_;
+        std::unique_ptr<DataContainerBase<function_wrapper>> pool_data_container_;
+        static thread_local DataContainerBase<function_wrapper>* local_data_container_;
+        static thread_local int thread_index_;
         std::atomic<bool> done_ = false;
         std::vector <std::thread> threads_;
+        std::atomic<bool> init_finished = false;
+        std::vector<std::unique_ptr<DataContainerBase<function_wrapper>>> local_containers;
         unsigned int threadNum_;
 
-        void worker() {
+        void worker(int threadIndex) {
+            while (!init_finished)
+                std::this_thread::yield();
+            thread_index_ = threadIndex;
+            local_data_container_ = local_containers[thread_index_].get();
             while (!done_) {
-                //auto task = work_queue_->wait_and_pop();
-                //task->run();
-                if(!run_pending_task_v2())
+                if (!run_pending_task_v2())
                     std::this_thread::yield();
             }
         }
@@ -31,17 +37,66 @@ namespace thread_pool {
         auto submitWrapper(F f) {
             std::packaged_task < R() > task(std::move(f));
             std::future <R> res(task.get_future());
-            work_queue_->push(function_wrapper(std::move(task)));
+            if(thread_index_ != -1) //means not main thread
+            {
+                local_data_container_->push(function_wrapper(std::move(task)));
+            }
+            else //means main thread
+            {
+                pool_data_container_->push(function_wrapper(std::move(task)));
+            }
             return res;
         }
 
+        int find_heaviest_task()
+        {
+            if(!init_finished || threadNum_ == 0) //if no thread in the pool, just quit
+            {
+                return -1;
+            }
+            int index = 0;
+            unsigned maxSize = local_containers[index]->size();
+            for(auto threadIndex = 1; threadIndex < local_containers.size(); threadIndex++)
+            {
+                if(local_containers[threadIndex]->size() > maxSize)
+                {
+                    maxSize = local_containers[threadIndex]->size();
+                    index = threadIndex;
+                }
+            }
+            return index;
+        }
+
+        bool job_steal_and_run()
+        {
+            std::unique_ptr<function_wrapper> task;
+            if(local_data_container_)
+            {
+                task = local_data_container_->try_pop();
+            }
+            if(!task) {
+                auto heaviestThread = find_heaviest_task();
+                if(heaviestThread != -1) {
+                    task = local_containers[heaviestThread]->try_pop();
+                }
+            }
+            if(task)
+            {
+                task->run();
+                return true;
+            }
+            return false;
+        }
+
     public:
-        explicit ThreadPool(std::unique_ptr<DataContainerBase<function_wrapper>> queue, unsigned int threadNum = 0) : work_queue_(std::move(queue)), done_(false) {
+        explicit ThreadPool(std::unique_ptr<DataContainerBase<function_wrapper>> queue, unsigned int threadNum = 0) : pool_data_container_(std::move(queue)), done_(false) {
             threadNum_ = std::min(threadNum, std::thread::hardware_concurrency());
             try {
-                for (unsigned int i = 0; i < threadNum_; i++) {
-                    threads_.emplace_back(&ThreadPool::worker, this);
+                for (int i = 0; i < threadNum_; i++) {
+                    local_containers.push_back(pool_data_container_->clone());
+                    threads_.emplace_back(&ThreadPool::worker, this, i);
                 }
+                init_finished = true;
             }
             catch (...) {
                 stop();
@@ -113,7 +168,7 @@ namespace thread_pool {
 
         void run_pending_task_v1()
         {
-            auto task = work_queue_->try_pop();
+            auto task = pool_data_container_->try_pop();
             if(task && !done_)
             {
                 task->run();
@@ -125,15 +180,23 @@ namespace thread_pool {
 
         bool run_pending_task_v2()
         {
-            auto task = work_queue_->try_pop();
-            if(task && !done_)
+            if(done_)
             {
-                task->run();
                 return true;
             }
-            return false; //note, it is up to application to perform yield or not when receiving false
+            if(!job_steal_and_run()) {
+                auto task = pool_data_container_->try_pop();
+                if (task && !done_) {
+                    task->run();
+                    return true;
+                }
+                return false; //it is up to application to perform yield or not when receiving false
+            }
+            return true;
         }
     };
+    thread_local DataContainerBase<function_wrapper>* ThreadPool::local_data_container_ = nullptr;
+    thread_local int ThreadPool::thread_index_ = -1;
 }
 
 #endif //DEMO_THREADPOOL_H

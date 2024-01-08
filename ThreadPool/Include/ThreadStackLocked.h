@@ -22,6 +22,7 @@ namespace thread_pool
             std::unique_ptr<Node> head_;
             std::mutex mutex_;
             std::condition_variable data_cond;
+            std::atomic<unsigned int> size_;
             auto pop_head() -> decltype(head_)
             {
                 std::unique_ptr<Node> temp = nullptr;
@@ -29,6 +30,7 @@ namespace thread_pool
                 {
                     temp = std::move(head_);
                     head_ = std::move(temp->next);
+                    size_--;
                 }
                 return temp;
             }
@@ -47,6 +49,7 @@ namespace thread_pool
                     std::lock_guard<std::mutex> guard(mutex_);
                     temp->next = std::move(head_);
                     head_ = std::move(temp);
+                    size_++;
                 }
                 data_cond.notify_one();
             }
@@ -79,6 +82,16 @@ namespace thread_pool
                 {
                     auto temp = pop_head();
                 }
+            }
+
+            std::unique_ptr<DataContainerBase<T>> clone() override
+            {
+                return std::make_unique<ThreadStackLocked<T>>();
+            }
+
+            unsigned int size() override
+            {
+                return size_;
             }
 
             virtual ~ThreadStackLocked()

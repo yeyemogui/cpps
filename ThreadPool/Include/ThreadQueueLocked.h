@@ -97,10 +97,15 @@ namespace thread_pool {
                 }
             }
 
-            /*unsigned int size() override
+            std::unique_ptr<DataContainerBase<T>> clone() override
+            {
+                return std::make_unique<ThreadQueueLocked<T>>();
+            }
+
+            unsigned int size() override
             {
                 return m_size;
-            }*/
+            }
             virtual ~ThreadQueueLocked() {
                 clear();
             }

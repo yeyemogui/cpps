@@ -6,9 +6,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-	set(CMAKE_CXX_FLAGS "-g")
+	set(CMAKE_CXX_FLAGS "-O2")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	add_definitions(-DDARWIN)
+	set(CMAKE_CXX_FLAGS "-O2")
 endif()
 
 add_executable(${PROJECT_NAME} main.cc

@@ -15,11 +15,13 @@ namespace thread_pool {
 
         virtual void clear() = 0;
 
-        //virtual unsigned int size() = 0;
+        virtual unsigned int size() = 0;
 
         virtual std::unique_ptr<T> wait_and_pop() = 0;
 
         virtual std::unique_ptr<T> try_pop() = 0;
+
+        virtual std::unique_ptr<DataContainerBase> clone() = 0;
 
         virtual ~DataContainerBase() = default;
     };

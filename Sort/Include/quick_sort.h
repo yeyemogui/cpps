@@ -11,7 +11,7 @@ using namespace thread_pool;
 namespace sort {
     class QuickSort {
     public:
-        explicit QuickSort(int threadNum = 10): pool_(DataContainerFactory::create_safe_queue(), threadNum){};
+        explicit QuickSort(int threadNum = 20): pool_(DataContainerFactory::create_safe_queue(), threadNum){};
 
         template<typename T>
         std::list<T> insert_sort(std::list<T> data)
@@ -47,15 +47,37 @@ namespace sort {
         }
 
         template<typename T>
+        std::list<T> do_normal_sort(std::list<T> data)
+        {
+            if(data.empty())
+            {
+                return data;
+            }
+            std::list<T> result;
+            result.splice(result.end(), data, data.begin());
+            auto pivot = *result.begin();
+            auto divide_point = std::partition(data.begin(), data.end(), [&](auto& d){
+                return d < pivot;
+            });
+            std::list<T> lower_part;
+            lower_part.splice(lower_part.begin(), data, data.begin(), divide_point);
+            lower_part = do_normal_sort(std::move(lower_part));
+            data = do_normal_sort(std::move(data));
+            result.splice(result.begin(), lower_part);
+            result.splice(result.end(), data);
+            return std::move(result);
+        }
+
+        template<typename T>
         std::list<T> do_sort(std::list<T> data)
         {
             if(data.empty())
             {
                 return data;
             }
-            if(data.size() <= 100)
+            if(data.size() <= 500)
             {
-                return insert_sort(std::move(data));
+                return do_normal_sort(std::move(data));
             }
             std::list<T> result;
             result.splice(result.begin(), data, data.begin());
@@ -64,8 +86,8 @@ namespace sort {
             std::list<T> lower_part;
             lower_part.splice(lower_part.end(), data, data.begin(), divide_point);
             auto res = pool_.submit<std::list<T>>(std::bind(&QuickSort::do_sort<T>, this, std::move(lower_part)));
-            std::list<T> high_part = do_sort(std::move(data)); //will use rvalue
-            result.splice(result.end(), high_part);
+            data = do_sort(std::move(data)); //will use rvalue
+            result.splice(result.end(), data);
             while(res.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
             {
                 if(!pool_.run_pending_task_v2())
@@ -76,6 +98,7 @@ namespace sort {
             result.splice(result.begin(), res.get());
             return std::move(result);
         }
+
     private:
         ThreadPool pool_;
     };

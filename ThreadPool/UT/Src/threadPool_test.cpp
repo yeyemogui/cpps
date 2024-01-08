@@ -29,7 +29,7 @@ public:
 
 TEST(thread_pool_test, test_submit_objMethod)
 {
-    auto queue = thread_queue::ThreadQueueFactory::create_safe_queue();
+    auto queue = DataContainerFactory::create_safe_queue();
     thread_pool::ThreadPool pool(std::move(queue), 10);
     MockTask task;
     EXPECT_CALL(task, run()).Times(1).WillRepeatedly(::testing::Return(5));
@@ -39,7 +39,7 @@ TEST(thread_pool_test, test_submit_objMethod)
 
 TEST(thread_pool_test, test_submit_smartPtr)
 {
-    auto queue = thread_queue::ThreadQueueFactory::create_safe_queue();
+    auto queue = DataContainerFactory::create_safe_queue();
     thread_pool::ThreadPool pool(std::move(queue), 10);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
@@ -48,7 +48,7 @@ TEST(thread_pool_test, test_submit_smartPtr)
 
 TEST(thread_pool_test, test_run_pending_task)
 {
-    auto queue = thread_queue::ThreadQueueFactory::create_safe_queue();
+    auto queue = DataContainerFactory::create_safe_queue();
     thread_pool::ThreadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
@@ -58,7 +58,7 @@ TEST(thread_pool_test, test_run_pending_task)
 
 TEST(thread_pool_test, test_run_pending_task_exception)
 {
-    auto queue = thread_queue::ThreadQueueFactory::create_safe_queue();
+    auto queue = DataContainerFactory::create_safe_queue();
     thread_pool::ThreadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
