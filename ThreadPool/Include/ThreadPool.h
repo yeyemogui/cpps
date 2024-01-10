@@ -67,25 +67,30 @@ namespace thread_pool {
             return index;
         }
 
-        bool job_steal_and_run()
+        std::unique_ptr<function_wrapper> pop_from_local()
         {
-            std::unique_ptr<function_wrapper> task;
             if(local_data_container_)
             {
-                task = local_data_container_->try_pop();
+                return local_data_container_->try_pop();
             }
-            if(!task) {
-                auto heaviestThread = find_heaviest_task();
-                if(heaviestThread != -1) {
-                    task = local_containers[heaviestThread]->try_pop();
-                }
+            return nullptr;
+        }
+
+        std::unique_ptr<function_wrapper> pop_from_others()
+        {
+            auto heaviestThread = find_heaviest_task();
+            if(heaviestThread != -1) {
+                return local_containers[heaviestThread]->try_pop();
             }
-            if(task)
-            {
-                task->run();
-                return true;
+            return nullptr;
+        }
+
+        std::unique_ptr<function_wrapper> pop_from_pool()
+        {
+            if(pool_data_container_) {
+                return pool_data_container_->try_pop();
             }
-            return false;
+            return nullptr;
         }
 
     public:
@@ -184,15 +189,13 @@ namespace thread_pool {
             {
                 return true;
             }
-            if(!job_steal_and_run()) {
-                auto task = pool_data_container_->try_pop();
-                if (task && !done_) {
-                    task->run();
-                    return true;
-                }
-                return false; //it is up to application to perform yield or not when receiving false
+            std::unique_ptr<function_wrapper> task;
+            if((task = pop_from_local()) || (task = pop_from_others()) || (task = pop_from_pool()))
+            {
+                task->run();
+                return true;
             }
-            return true;
+            return false;
         }
     };
     thread_local DataContainerBase<function_wrapper>* ThreadPool::local_data_container_ = nullptr;
