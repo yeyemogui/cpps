@@ -60,7 +60,7 @@ TEST(quick_sort_test, insert_sort_test)
 TEST(quick_sort_test, normal_sort_test)
 {
     sort::QuickSort sorter;
-    const auto total = 100;
+    const auto total = 10000;
     std::list<int> data;
     std::default_random_engine  e;
     std::uniform_int_distribution<int> u(0, total);
@@ -69,7 +69,7 @@ TEST(quick_sort_test, normal_sort_test)
         data.push_back(u(e));
     }
     std::cout << std::endl;
-    auto res = sorter.do_normal_sort(data);
+    auto res = sorter.do_sort(data);
     ASSERT_EQ(data.size(), res.size());
     data.sort();
     auto d = data.begin();

@@ -20,4 +20,6 @@ add_executable(${PROJECT_NAME} main.cc
 		ThreadPool/Include/DataContainerBase.h
 		ThreadPool/Include/DataContainerFactory.h
 		Sort/Include/quick_sort.h
-		ThreadPool/Include/ThreadStackLocked.h)
+		ThreadPool/Include/ThreadStackLocked.h
+		ThreadPool/Include/ThreadStackLockFree.h
+		ThreadPool/Include/ThreadQueueLockFree.h)

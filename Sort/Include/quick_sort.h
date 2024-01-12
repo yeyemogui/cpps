@@ -11,7 +11,7 @@ using namespace thread_pool;
 namespace sort {
     class QuickSort {
     public:
-        explicit QuickSort(int threadNum = 20): pool_(DataContainerFactory::create_safe_queue(), threadNum){};
+        explicit QuickSort(std::unique_ptr<DataContainerBase<function_wrapper>> container, int threadNum = 20): pool_(std::move(container), threadNum){};
 
         template<typename T>
         std::list<T> insert_sort(std::list<T> data)

@@ -58,11 +58,15 @@ TEST(thread_pool_test, test_run_pending_task)
 
 TEST(thread_pool_test, test_run_pending_task_exception)
 {
-    auto queue = DataContainerFactory::create_safe_queue();
+    auto queue = DataContainerFactory::create_stack_lock_free();
     thread_pool::ThreadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));
-    auto ret = pool.run_pending_task_v2();
+    auto ret = false;
+    while(!ret)
+    {
+        ret = pool.run_pending_task_v2();
+    }
     ASSERT_EQ(res.get(), 50);
     ASSERT_EQ(ret, true);
     ASSERT_THROW(pool.run_pending_task_v1(), EmptyPool);

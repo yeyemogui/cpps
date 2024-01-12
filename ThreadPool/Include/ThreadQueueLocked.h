@@ -31,7 +31,8 @@ namespace thread_pool {
             {
                 auto old_head = std::move(head);
                 head = std::move(old_head->next);
-                m_size--;
+                //m_size--;
+                m_size.fetch_sub(1, std::memory_order_seq_cst);
                 return old_head;
             }
 
@@ -82,7 +83,8 @@ namespace thread_pool {
                     tail->data = std::move(data);
                     tail->next = std::move(p);
                     tail = new_tail;
-                    ++m_size;
+                    //++m_size;
+                    m_size.fetch_add(1, std::memory_order_seq_cst);
                 }
                 data_cond.notify_one();
             }
@@ -104,7 +106,7 @@ namespace thread_pool {
 
             unsigned int size() override
             {
-                return m_size;
+                return m_size.load(std::memory_order_consume);
             }
             virtual ~ThreadQueueLocked() {
                 clear();

@@ -8,6 +8,8 @@
 #include "ThreadQueueLocked.h"
 #include "function_wrapper.h"
 #include "ThreadStackLocked.h"
+#include "ThreadStackLockFree.h"
+#include "ThreadQueueLockFree.h"
 
 namespace thread_pool {
     class DataContainerFactory {
@@ -18,6 +20,14 @@ namespace thread_pool {
         static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_locked()
         {
             return std::make_unique<thread_stack::ThreadStackLocked<function_wrapper>>();
+        }
+        static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_lock_free()
+        {
+            return std::make_unique<lock_free::ThreadStackLockFree<function_wrapper>>();
+        }
+        static std::unique_ptr<DataContainerBase<function_wrapper>> create_queue_lock_free()
+        {
+            return std::make_unique<lock_free::ThreadQueueLockFree<function_wrapper>>();
         }
     };
 }

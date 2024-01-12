@@ -21,7 +21,7 @@ namespace thread_pool {
 
         virtual std::unique_ptr<T> try_pop() = 0;
 
-        virtual std::unique_ptr<DataContainerBase> clone() = 0;
+        virtual std::unique_ptr<DataContainerBase<T>> clone() = 0;
 
         virtual ~DataContainerBase() = default;
     };

@@ -7,7 +7,9 @@
 #include <chrono>
 int main() {
     std::cout << "Hello, World!" << std::endl;
-    sort::QuickSort sorter(11);
+    sort::QuickSort sorter_lock_free(DataContainerFactory::create_stack_lock_free(), 11);
+    sort::QuickSort sorter_locked_stack(DataContainerFactory::create_stack_locked(), 11);
+    sort::QuickSort sorter_locked_queue(DataContainerFactory::create_safe_queue(), 11);
     std::list<int> data;
 
     std::default_random_engine  e;
@@ -20,24 +22,36 @@ int main() {
     }
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "used " << duration << " ms to create source data" << std::endl;
+    std::cout << "used " << duration << " ms to generate source data" << std::endl;
 
     start_time = std::chrono::high_resolution_clock::now();
-    auto res = sorter.do_sort(data);
+    auto res = sorter_lock_free.do_sort(data);
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "We used " << duration << " ms to sort data" << std::endl;
+    std::cout << "Lock-Free Stack used " << duration << " ms to sort data" << std::endl;
 
     start_time = std::chrono::high_resolution_clock::now();
-    res = sorter.do_normal_sort(data);
+    res = sorter_locked_stack.do_sort(data);
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "Quick Sort used " << duration << " ms to sort data" << std::endl;
+    std::cout << "Locked Stack used " << duration << " ms to sort data" << std::endl;
+
+    start_time = std::chrono::high_resolution_clock::now();
+    res = sorter_locked_queue.do_sort(data);
+    end_time = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    std::cout << "Locked Queue used " << duration << " ms to sort data" << std::endl;
+
+    start_time = std::chrono::high_resolution_clock::now();
+    res = sorter_lock_free.do_normal_sort(data);
+    end_time = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    std::cout << "Standard Quick Sort used " << duration << " ms to sort data" << std::endl;
 
     start_time = std::chrono::high_resolution_clock::now();
     data.sort();
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    std::cout << "STD used " << duration << " ms to sort data" << std::endl;
+    std::cout << "std::sort used " << duration << " ms to sort data" << std::endl;
     return 0;
 }
