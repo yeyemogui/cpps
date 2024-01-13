@@ -16,7 +16,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 set(CMAKE_CXX_FLAGS "-g")
 add_executable(${PROJECT_NAME} UT/main.cc
-        UT/Src/thread_queue_safe_test.cc
+        UT/Src/thread_queue_locked_test.cc
         UT/Src/function_wrapper_test.cc
         UT/Src/threadPool_test.cpp
         Include/ThreadPool.h

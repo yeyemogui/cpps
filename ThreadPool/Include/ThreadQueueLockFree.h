@@ -20,8 +20,14 @@ namespace thread_pool
             struct Node
             {
                 std::unique_ptr<T> data;
-                Node* prev;
+                std::atomic<bool> isOperational;
                 Node* next;
+                Node()
+                {
+                    data = nullptr;
+                    next = nullptr;
+                    isOperational = false;
+                }
             };
             std::atomic<Node*> head_;
             std::atomic<Node*> tail_;
@@ -49,7 +55,8 @@ namespace thread_pool
             void addToBeDeleted(Node* node)
             {
                 auto* old = to_be_deleted.load(std::memory_order_acquire);
-                while(!to_be_deleted.compare_exchange_weak(old, node, std::memory_order_acq_rel));
+                node->next = old;
+                while(!to_be_deleted.compare_exchange_weak(node->next, node, std::memory_order_acq_rel));
             }
 
             void tryCleanToBeDeletedList()
@@ -71,40 +78,57 @@ namespace thread_pool
             }
 
         public:
+            ThreadQueueLockFree()
+            {
+                Node* node = new Node();
+                head_.store(node);
+                tail_.store(node);
+            }
+            ~ThreadQueueLockFree()
+            {
+                clear();
+            }
             void push(T&& data) override
             {
-                auto* node = new Node();
-                node->data = std::make_unique<T>(std::move(data));
-                auto old_tail = tail_.load(std::memory_order_acquire);
-                node->prev = old_tail;
-                while(!tail_.compare_exchange_weak(node->prev, node, std::memory_order_acq_rel));
-                size_++;
+                Node* new_tail = new Node();
+                auto d = std::make_unique<T>(std::move(data));
+                while(true)
+                {
+                    auto* old_tail = tail_.load(std::memory_order_acquire);
+                    bool test = false;
+                    if(!old_tail->isOperational.compare_exchange_strong(test, true, std::memory_order_acq_rel))
+                        continue;
+                    old_tail->next = new_tail;
+                    old_tail->data = std::move(d);
+                    tail_.store(new_tail, std::memory_order_release);
+                    size_++;
+                    break;
+                }
             }
 
             std::unique_ptr<T> try_pop() override
             {
-                auto* old = head_.load(std::memory_order_acquire);
+                auto* old_head = head_.load(std::memory_order_acquire);
+                if(!old_head || !old_head->next)
+                    return nullptr;
                 auto* hazardPtr = getHazardPtr();
-                hazardPtr->store(old, std::memory_order_release);
-                while(old && !head_.compare_exchange_weak(old, old->next, std::memory_order_acq_rel));
+                hazardPtr->store(old_head, std::memory_order_release);
+                while(old_head->next && !head_.compare_exchange_weak(old_head, old_head->next, std::memory_order_acq_rel));
                 hazardPtr->store(nullptr, std::memory_order_release);
-                if(old)
+                if(!old_head->next)
                 {
-                    size_--;
-                    std::unique_ptr<T> res;
-                    res.swap(old->data);
-                    if(isDeletable(old))
-                    {
-                        delete old;
-                    }
-                    else
-                    {
-                        addToBeDeleted(old);
-                    }
-                    tryCleanToBeDeletedList();
-                    return res;
+                    return nullptr;
                 }
-                return nullptr;
+                size_--;
+                std::unique_ptr<T> res = std::move(old_head->data);
+
+                if (isDeletable(old_head)) {
+                    delete old_head;
+                } else {
+                    addToBeDeleted(old_head);
+                }
+                tryCleanToBeDeletedList();
+                return res;
             }
 
             void clear() override

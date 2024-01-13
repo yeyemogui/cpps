@@ -58,7 +58,7 @@ TEST(thread_pool_test, test_run_pending_task)
 
 TEST(thread_pool_test, test_run_pending_task_exception)
 {
-    auto queue = DataContainerFactory::create_stack_lock_free();
+    auto queue = DataContainerFactory::create_queue_lock_free();
     thread_pool::ThreadPool pool(std::move(queue), 0);
     auto p = std::make_unique<MockTask2>();
     auto res = pool.submit<int>(std::move(p));

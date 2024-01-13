@@ -125,7 +125,7 @@ namespace thread_pool {
                     thread.join();
                 }
             }
-            std::cout << "All threads in pool are stopped" << std::endl;
+            //std::cout << "All threads in pool are stopped" << std::endl;
         }
 
         template<typename R, typename T, typename... Types>
@@ -167,7 +167,7 @@ namespace thread_pool {
 
         void stop() {
             done_ = true;
-            std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
+            //std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
             submit<void>([this]{this->stop();});
         }
 

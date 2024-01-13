@@ -69,6 +69,11 @@ namespace thread_pool {
         public:
             ThreadStackLockFree() = default;
 
+            ~ThreadStackLockFree()
+            {
+                clear();
+            }
+
             void push(T &&data) override {
                 auto *node = new Node();
                 node->data = std::make_unique<T>(std::move(data));
@@ -110,6 +115,7 @@ namespace thread_pool {
                 if(old) {
                     res.swap(old->data);
                 }
+
                 if (isDeletable(old))
                 {
                     delete old;

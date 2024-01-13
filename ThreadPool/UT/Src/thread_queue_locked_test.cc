@@ -4,13 +4,13 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "../../Include/ThreadQueueLocked.h"
-class thread_queue_safe_test: public testing::Test
+class thread_queue_locked_test: public testing::Test
 {
 protected:
     thread_pool::thread_queue::ThreadQueueLocked<int> m_queue;
 };
 
-TEST_F(thread_queue_safe_test, test_push)
+TEST_F(thread_queue_locked_test, test_push)
 {
     ASSERT_EQ(m_queue.size(), 0);
     for(int i = 1; i < 1000; i++)
@@ -20,7 +20,7 @@ TEST_F(thread_queue_safe_test, test_push)
     }
 }
 
-TEST_F(thread_queue_safe_test, test_pop)
+TEST_F(thread_queue_locked_test, test_pop)
 {
     for(int i = 1; i < 1000; i++)
     {
@@ -35,7 +35,7 @@ TEST_F(thread_queue_safe_test, test_pop)
     ASSERT_EQ(m_queue.size(), 0);
 }
 
-TEST_F(thread_queue_safe_test, test_clear)
+TEST_F(thread_queue_locked_test, test_clear)
 {
     for(int i = 1; i < 1000; i++)
     {
