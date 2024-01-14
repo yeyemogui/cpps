@@ -7,9 +7,11 @@
 
 #include <memory>
 
-namespace thread_pool {
+namespace thread_pool
+{
     template<typename T>
-    class DataContainerBase {
+    class DataContainerBase
+    {
     public:
         virtual void push(T &&) = 0;
 

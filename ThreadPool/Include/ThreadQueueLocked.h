@@ -4,17 +4,22 @@
 #include <mutex>
 #include <condition_variable>
 #include "DataContainerBase.h"
-namespace thread_pool {
-    namespace thread_queue {
+
+namespace thread_pool
+{
+    namespace thread_queue
+    {
         template<typename T>
-        class ThreadQueueLocked: public DataContainerBase<T>{
+        class ThreadQueueLocked : public DataContainerBase<T>
+        {
         private:
-            struct node {
-                std::unique_ptr <T> data;
-                std::unique_ptr <node> next;
+            struct node
+            {
+                std::unique_ptr<T> data;
+                std::unique_ptr<node> next;
             };
 
-            std::unique_ptr <node> head;
+            std::unique_ptr<node> head;
             node *tail;
             std::atomic<unsigned int> m_size;
 
@@ -23,12 +28,11 @@ namespace thread_pool {
             std::condition_variable data_cond;
 
             auto get_tail() {
-                std::lock_guard <std::mutex> tail_lock(tail_mutex);
+                std::lock_guard<std::mutex> tail_lock(tail_mutex);
                 return tail;
             }
 
-            auto pop_head() -> decltype(head)
-            {
+            auto pop_head() -> decltype(head) {
                 auto old_head = std::move(head);
                 head = std::move(old_head->next);
                 //m_size--;
@@ -37,13 +41,13 @@ namespace thread_pool {
             }
 
             auto wait_for_data() {
-                std::unique_lock <std::mutex> head_lock(head_mutex);
+                std::unique_lock<std::mutex> head_lock(head_mutex);
                 data_cond.wait(head_lock, [&] { return head.get() != get_tail(); });
                 return head_lock;
             }
 
             auto wait_pop_head() {
-                std::unique_lock <std::mutex> head_lock(wait_for_data());
+                std::unique_lock<std::mutex> head_lock(wait_for_data());
                 return pop_head();
             }
 
@@ -54,16 +58,14 @@ namespace thread_pool {
 
             ThreadQueueLocked &operator=(const ThreadQueueLocked &other) = delete;
 
-            std::unique_ptr<T> wait_and_pop() override
-            {
+            std::unique_ptr<T> wait_and_pop() override {
                 auto old_head = wait_pop_head();
                 return std::move(old_head->data);
             }
 
-            std::unique_ptr<T> try_pop() override
-            {
+            std::unique_ptr<T> try_pop() override {
                 std::lock_guard<std::mutex> head_lock(head_mutex);
-                if(head.get() != get_tail())
+                if (head.get() != get_tail())
                 {
                     return std::move(pop_head()->data);
                 }
@@ -73,13 +75,12 @@ namespace thread_pool {
                 }
             }
 
-            void push(T &&new_value) override
-            {
+            void push(T &&new_value) override {
                 auto data = std::make_unique<T>(std::move(new_value));
-                std::unique_ptr <node> p(new node);
+                std::unique_ptr<node> p(new node);
                 node *const new_tail = p.get();
                 {
-                    std::lock_guard <std::mutex> tail_lock(tail_mutex);
+                    std::lock_guard<std::mutex> tail_lock(tail_mutex);
                     tail->data = std::move(data);
                     tail->next = std::move(p);
                     tail = new_tail;
@@ -89,25 +90,24 @@ namespace thread_pool {
                 data_cond.notify_one();
             }
 
-            void clear() override
-            {
+            void clear() override {
                 std::lock(head_mutex, tail_mutex);
-                std::lock_guard <std::mutex> head_lock(head_mutex, std::adopt_lock);
-                std::lock_guard <std::mutex> tail_lock(tail_mutex, std::adopt_lock);
-                while (head.get() != tail) {
+                std::lock_guard<std::mutex> head_lock(head_mutex, std::adopt_lock);
+                std::lock_guard<std::mutex> tail_lock(tail_mutex, std::adopt_lock);
+                while (head.get() != tail)
+                {
                     pop_head();
                 }
             }
 
-            std::unique_ptr<DataContainerBase<T>> clone() override
-            {
+            std::unique_ptr<DataContainerBase<T>> clone() override {
                 return std::make_unique<ThreadQueueLocked<T>>();
             }
 
-            unsigned int size() override
-            {
+            unsigned int size() override {
                 return m_size.load(std::memory_order_consume);
             }
+
             virtual ~ThreadQueueLocked() {
                 clear();
             }

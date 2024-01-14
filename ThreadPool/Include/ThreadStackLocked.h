@@ -4,14 +4,16 @@
 
 #ifndef DEMO_THREADSTACKLOCKED_H
 #define DEMO_THREADSTACKLOCKED_H
+
 #include "DataContainerBase.h"
 #include <thread>
+
 namespace thread_pool
 {
     namespace thread_stack
     {
         template<typename T>
-        class ThreadStackLocked: public DataContainerBase<T>
+        class ThreadStackLocked : public DataContainerBase<T>
         {
         private:
             struct Node
@@ -23,10 +25,10 @@ namespace thread_pool
             std::mutex mutex_;
             std::condition_variable data_cond;
             std::atomic<unsigned int> size_;
-            auto pop_head() -> decltype(head_)
-            {
+
+            auto pop_head() -> decltype(head_) {
                 std::unique_ptr<Node> temp = nullptr;
-                if(head_ != nullptr)
+                if (head_ != nullptr)
                 {
                     temp = std::move(head_);
                     head_ = std::move(temp->next);
@@ -35,14 +37,14 @@ namespace thread_pool
                 return temp;
             }
 
-            bool is_empty()
-            {
+            bool is_empty() {
                 return head_ == nullptr;
             }
+
         public:
-            ThreadStackLocked(): head_(nullptr){};
-            void push(T&& data) override
-            {
+            ThreadStackLocked() : head_(nullptr) {};
+
+            void push(T &&data) override {
                 auto temp = std::make_unique<Node>();
                 temp->data = std::make_unique<T>(std::move(data));
                 {
@@ -54,8 +56,7 @@ namespace thread_pool
                 data_cond.notify_one();
             }
 
-            std::unique_ptr<T> wait_and_pop() override
-            {
+            std::unique_ptr<T> wait_and_pop() override {
                 std::unique_ptr<Node> temp;
                 {
                     std::unique_lock<std::mutex> locker(mutex_);
@@ -65,37 +66,32 @@ namespace thread_pool
                 return std::move(temp->data);
             }
 
-            std::unique_ptr<T> try_pop() override
-            {
+            std::unique_ptr<T> try_pop() override {
                 std::unique_ptr<Node> temp;
                 {
                     std::unique_lock<std::mutex> locker(mutex_);
                     temp = pop_head();
                 }
-                return temp == nullptr? nullptr: std::move(temp->data);
+                return temp == nullptr ? nullptr : std::move(temp->data);
             }
 
-            void clear() override
-            {
+            void clear() override {
                 std::unique_lock<std::mutex> locker(mutex_);
-                while(!is_empty())
+                while (!is_empty())
                 {
                     auto temp = pop_head();
                 }
             }
 
-            std::unique_ptr<DataContainerBase<T>> clone() override
-            {
+            std::unique_ptr<DataContainerBase<T>> clone() override {
                 return std::make_unique<ThreadStackLocked<T>>();
             }
 
-            unsigned int size() override
-            {
+            unsigned int size() override {
                 return size_;
             }
 
-            virtual ~ThreadStackLocked()
-            {
+            virtual ~ThreadStackLocked() {
                 clear();
             }
         };

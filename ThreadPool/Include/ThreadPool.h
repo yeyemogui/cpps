@@ -4,20 +4,24 @@
 
 #ifndef DEMO_THREADPOOL_H
 #define DEMO_THREADPOOL_H
+
 #include "ThreadQueueLocked.h"
 #include "function_wrapper.h"
 #include <future>
 #include <algorithm>
 #include <execution>
 #include "exceptions.h"
-namespace thread_pool {
-    class ThreadPool {
+
+namespace thread_pool
+{
+    class ThreadPool
+    {
     private:
         std::unique_ptr<DataContainerBase<function_wrapper>> pool_data_container_;
-        static thread_local DataContainerBase<function_wrapper>* local_data_container_;
+        static thread_local DataContainerBase<function_wrapper> *local_data_container_;
         static thread_local int thread_index_;
         std::atomic<bool> done_ = false;
-        std::vector <std::thread> threads_;
+        std::vector<std::thread> threads_;
         std::atomic<bool> init_finished = false;
         std::vector<std::unique_ptr<DataContainerBase<function_wrapper>>> local_containers;
         unsigned int threadNum_;
@@ -27,17 +31,20 @@ namespace thread_pool {
                 std::this_thread::yield();
             thread_index_ = threadIndex;
             local_data_container_ = local_containers[thread_index_].get();
-            while (!done_) {
+            while (!done_)
+            {
                 if (!run_pending_task_v2())
+                {
                     std::this_thread::yield();
+                }
             }
         }
 
         template<typename R, typename F>
         auto submitWrapper(F f) {
-            std::packaged_task < R() > task(std::move(f));
-            std::future <R> res(task.get_future());
-            if(thread_index_ != -1) //means not main thread
+            std::packaged_task<R()> task(std::move(f));
+            std::future<R> res(task.get_future());
+            if (thread_index_ != -1) //means not main thread
             {
                 local_data_container_->push(function_wrapper(std::move(task)));
             }
@@ -48,17 +55,16 @@ namespace thread_pool {
             return res;
         }
 
-        int find_heaviest_task()
-        {
-            if(!init_finished || threadNum_ == 0) //if no thread in the pool, just quit
+        int find_heaviest_task() {
+            if (!init_finished || threadNum_ == 0) //if no thread in the pool, just quit
             {
                 return -1;
             }
             int index = 0;
             unsigned maxSize = local_containers[index]->size();
-            for(auto threadIndex = 1; threadIndex < local_containers.size(); threadIndex++)
+            for (auto threadIndex = 1; threadIndex < local_containers.size(); threadIndex++)
             {
-                if(local_containers[threadIndex]->size() > maxSize)
+                if (local_containers[threadIndex]->size() > maxSize)
                 {
                     maxSize = local_containers[threadIndex]->size();
                     index = threadIndex;
@@ -67,43 +73,46 @@ namespace thread_pool {
             return index;
         }
 
-        std::unique_ptr<function_wrapper> pop_from_local()
-        {
-            if(local_data_container_)
+        std::unique_ptr<function_wrapper> pop_from_local() {
+            if (local_data_container_)
             {
                 return local_data_container_->try_pop();
             }
             return nullptr;
         }
 
-        std::unique_ptr<function_wrapper> pop_from_others()
-        {
+        std::unique_ptr<function_wrapper> pop_from_others() {
             auto heaviestThread = find_heaviest_task();
-            if(heaviestThread != -1) {
+            if (heaviestThread != -1)
+            {
                 return local_containers[heaviestThread]->try_pop();
             }
             return nullptr;
         }
 
-        std::unique_ptr<function_wrapper> pop_from_pool()
-        {
-            if(pool_data_container_) {
+        std::unique_ptr<function_wrapper> pop_from_pool() {
+            if (pool_data_container_)
+            {
                 return pool_data_container_->try_pop();
             }
             return nullptr;
         }
 
     public:
-        explicit ThreadPool(std::unique_ptr<DataContainerBase<function_wrapper>> queue, unsigned int threadNum = 0) : pool_data_container_(std::move(queue)), done_(false) {
+        explicit ThreadPool(std::unique_ptr<DataContainerBase<function_wrapper>> queue, unsigned int threadNum = 0)
+                : pool_data_container_(std::move(queue)), done_(false) {
             threadNum_ = std::min(threadNum, std::thread::hardware_concurrency());
-            try {
-                for (int i = 0; i < threadNum_; i++) {
+            try
+            {
+                for (int i = 0; i < threadNum_; i++)
+                {
                     local_containers.push_back(pool_data_container_->clone());
                     threads_.emplace_back(&ThreadPool::worker, this, i);
                 }
                 init_finished = true;
             }
-            catch (...) {
+            catch (...)
+            {
                 stop();
                 throw;
             }
@@ -118,9 +127,9 @@ namespace thread_pool {
             std::for_each(std::execution::par, threads_.begin(), threads_.end(), std::mem_fn(&std::thread::join));
 #endif
              */
-            for(auto& thread : threads_)
+            for (auto &thread: threads_)
             {
-                if(thread.joinable())
+                if (thread.joinable())
                 {
                     thread.join();
                 }
@@ -140,57 +149,59 @@ namespace thread_pool {
         }
 
         template<typename T>
-        struct isSmartPtr : public std::false_type{};
+        struct isSmartPtr : public std::false_type
+        {
+        };
         template<typename T>
-        struct isSmartPtr<std::unique_ptr<T>>: public std::true_type {};
+        struct isSmartPtr<std::unique_ptr<T>> : public std::true_type
+        {
+        };
         template<typename T>
-        struct isSmartPtr<std::shared_ptr<T>>: public std::true_type {};
+        struct isSmartPtr<std::shared_ptr<T>> : public std::true_type
+        {
+        };
 
         template<typename R, typename T, typename = std::enable_if_t<isSmartPtr<T>::value>>
-        auto submit(T smartPtr) -> std::future<R>
-        {
+        auto submit(T smartPtr) -> std::future<R> {
             T p;
-            return submitWrapper<R>([p = std::move(smartPtr)]{return p->operator()();});
+            return submitWrapper<R>([p = std::move(smartPtr)] { return p->operator()(); });
         }
 
         template<typename F>
-        auto submit(F f) -> std::future<void>
-        {
+        auto submit(F f) -> std::future<void> {
             return submitWrapper<void>(f);
         }
 
         template<typename R>
-        auto submit(std::function<R()> f) -> std::future<R>
-        {
+        auto submit(std::function<R()> f) -> std::future<R> {
             return submitWrapper<R>(f);
         }
 
         void stop() {
             done_ = true;
             //std::cout << "Threads Pool size is " << threads_.size() << ". start stop threads..." << threadNum_-- << std::endl;
-            submit<void>([this]{this->stop();});
+            submit<void>([this] { this->stop(); });
         }
 
-        void run_pending_task_v1()
-        {
+        void run_pending_task_v1() {
             auto task = pool_data_container_->try_pop();
-            if(task && !done_)
+            if (task && !done_)
             {
                 task->run();
             }
-            else {
+            else
+            {
                 throw EmptyPool();
             }
         }
 
-        bool run_pending_task_v2()
-        {
-            if(done_)
+        bool run_pending_task_v2() {
+            if (done_)
             {
                 return true;
             }
             std::unique_ptr<function_wrapper> task;
-            if((task = pop_from_local()) || (task = pop_from_others()) || (task = pop_from_pool()))
+            if ((task = pop_from_local()) || (task = pop_from_others()) || (task = pop_from_pool()))
             {
                 task->run();
                 return true;
@@ -198,7 +209,8 @@ namespace thread_pool {
             return false;
         }
     };
-    thread_local DataContainerBase<function_wrapper>* ThreadPool::local_data_container_ = nullptr;
+
+    thread_local DataContainerBase<function_wrapper> *ThreadPool::local_data_container_ = nullptr;
     thread_local int ThreadPool::thread_index_ = -1;
 }
 
