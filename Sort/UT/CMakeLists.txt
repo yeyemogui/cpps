@@ -14,11 +14,14 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories("/usr/local/include")
     add_definitions(-DDARWIN)
 endif()
-set(CMAKE_CXX_FLAGS "-g")
+set(CMAKE_CXX_FLAGS "-g -O2")
 add_executable(${PROJECT_NAME} main.cc
         ../Include/quick_sort.h
         Src/quick_sort_test.cc
         ../Include/quick_sort.h
         ../Include/quick_sort.h)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE ${GTEST_LIBRARIES} GTest::gmock)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${GTEST_LIBRARIES} GTest::gmock -latomic)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${GTEST_LIBRARIES} GTest::gmock)
+endif ()

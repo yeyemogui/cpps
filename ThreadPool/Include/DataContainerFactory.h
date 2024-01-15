@@ -8,7 +8,9 @@
 #include "ThreadQueueLocked.h"
 #include "function_wrapper.h"
 #include "ThreadStackLocked.h"
-#include "ThreadStackLockFree.h"
+#include "ThreadStackLockFreeV1.h"
+#include "ThreadStackLockFreeV2.h"
+#include "ThreadStackLockFreeV3.h"
 #include "ThreadQueueLockFree.h"
 
 namespace thread_pool
@@ -24,8 +26,16 @@ namespace thread_pool
             return std::make_unique<thread_stack::ThreadStackLocked<function_wrapper>>();
         }
 
-        static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_lock_free() {
-            return std::make_unique<lock_free::ThreadStackLockFree<function_wrapper>>();
+        static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_lock_freeV1() {
+            return std::make_unique<lock_free::ThreadStackLockFreeV1<function_wrapper>>();
+        }
+
+        static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_lock_freeV2() {
+            return std::make_unique<lock_free::ThreadStackLockFreeV2<function_wrapper>>();
+        }
+
+        static std::unique_ptr<DataContainerBase<function_wrapper>> create_stack_lock_freeV3() {
+            return std::make_unique<lock_free::ThreadStackLockFreeV3<function_wrapper>>();
         }
 
         static std::unique_ptr<DataContainerBase<function_wrapper>> create_queue_lock_free() {

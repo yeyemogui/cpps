@@ -36,7 +36,7 @@ namespace thread_pool
                 auto old_head = std::move(head);
                 head = std::move(old_head->next);
                 //m_size--;
-                m_size.fetch_sub(1, std::memory_order_seq_cst);
+                m_size.fetch_sub(1, std::memory_order_acquire);
                 return old_head;
             }
 
@@ -84,8 +84,8 @@ namespace thread_pool
                     tail->data = std::move(data);
                     tail->next = std::move(p);
                     tail = new_tail;
-                    //++m_size;
-                    m_size.fetch_add(1, std::memory_order_seq_cst);
+                   //++m_size;
+                    m_size.fetch_add(1, std::memory_order_acq_rel);
                 }
                 data_cond.notify_one();
             }

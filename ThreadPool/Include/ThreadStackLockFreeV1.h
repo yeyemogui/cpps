@@ -2,8 +2,8 @@
 // Created by sleepwalker on 2024/1/12.
 //
 
-#ifndef DEMO_THREADSTACKLOCKFREE_H
-#define DEMO_THREADSTACKLOCKFREE_H
+#ifndef DEMO_THREADSTACKLOCKFREEV1_H
+#define DEMO_THREADSTACKLOCKFREEV1_H
 
 #include "DataContainerBase.h"
 #include "exceptions.h"
@@ -16,7 +16,7 @@ namespace thread_pool
     namespace lock_free
     {
         template<typename T>
-        class ThreadStackLockFree : public DataContainerBase<T>
+        class ThreadStackLockFreeV1 : public DataContainerBase<T>
         {
         private:
             struct Node
@@ -84,24 +84,24 @@ namespace thread_pool
             }
 
         public:
-            ThreadStackLockFree() = default;
+            ThreadStackLockFreeV1(): head_(nullptr), size_(0), to_be_deleted_(nullptr){}
 
-            ~ThreadStackLockFree() { clear(); }
+            ~ThreadStackLockFreeV1() { clear(); }
 
             void push(T &&data) override {
                 auto *node = new Node();
                 node->data = std::make_unique<T>(std::move(data));
                 node->next = head_.load(std::memory_order_relaxed);
                 while (!head_.compare_exchange_weak(node->next, node, std::memory_order_acq_rel));
-                size_.fetch_add(1, std::memory_order_acquire);
+                size_.fetch_add(1, std::memory_order_relaxed);
             }
 
             void clear() override {
-                while (auto data = try_pop());
+                while (try_pop());
             }
 
             unsigned int size() override {
-                auto size = size_.load(std::memory_order_acquire);
+                auto size = size_.load(std::memory_order_relaxed);
                 return size;
             }
 
@@ -111,36 +111,40 @@ namespace thread_pool
             }
 
             std::unique_ptr<DataContainerBase<T>> clone() override {
-                return std::make_unique<ThreadStackLockFree<T>>();
+                return std::make_unique<ThreadStackLockFreeV1<T>>();
             }
 
             std::unique_ptr<T> try_pop() override {
-                Node *old = head_.load(std::memory_order_acquire);
+                Node *old_head = head_.load(std::memory_order_acquire);
                 auto *hazard_record = getHazardPtrForThread();
-                hazard_record->store(old);
-                if (!old)
+                Node* temp = nullptr;
+                do
                 {
-                    return nullptr;
-                }
+                    if(!old_head)
+                    {
+                        return nullptr;
+                    }
+                    temp = old_head;
+                    hazard_record->store(temp, std::memory_order_release);
+                    old_head = head_.load(std::memory_order_acquire);
+                }while(temp != old_head);
 
-                while (old && !head_.compare_exchange_strong(old, old->next,
-                                                             std::memory_order_seq_cst))
-                {
-                }
+                while (old_head && !head_.compare_exchange_strong(old_head, old_head->next, std::memory_order_seq_cst));
+                size_.fetch_sub(1, std::memory_order_relaxed);
                 hazard_record->store(nullptr, std::memory_order_release);
                 std::unique_ptr<T> res;
-                if (old)
+                if (old_head)
                 {
-                    res.swap(old->data);
+                    res.swap(old_head->data);
                 }
 
-                if (isDeletable(old))
+                if (isDeletable(old_head))
                 {
-                    delete old;
+                    delete old_head;
                 }
                 else
                 {
-                    addToBeDeletedList(old);
+                    addToBeDeletedList(old_head);
                 }
                 tryCleanToBeDeletedList();
                 return res;
@@ -148,4 +152,4 @@ namespace thread_pool
         };
     } // namespace lock_free
 } // namespace thread_pool
-#endif // DEMO_THREADSTACKLOCKFREE_H
+#endif // DEMO_THREADSTACKLOCKFREEV1_H

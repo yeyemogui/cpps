@@ -23,6 +23,7 @@ namespace thread_pool
             {
                 std::unique_ptr<T> data;
                 std::atomic<bool> isOperational;
+                std::atomic<bool> isValid;
                 Node *next;
 
                 Node() {
@@ -109,6 +110,7 @@ namespace thread_pool
                     }
                     old_tail->next = new_tail;
                     old_tail->data = std::move(d);
+                    old_tail->isValid.store(true, std::memory_order_release);
                     tail_.store(new_tail, std::memory_order_release);
                     size_++;
                     break;
@@ -116,21 +118,24 @@ namespace thread_pool
             }
 
             std::unique_ptr<T> try_pop() override {
-                auto *old_head = head_.load(std::memory_order_acquire);
-                if (!old_head || !old_head->next)
-                {
-                    return nullptr;
-                }
+                Node *old_head = head_.load(std::memory_order_acquire);
                 auto *hazardPtr = getHazardPtr();
-                hazardPtr->store(old_head, std::memory_order_release);
-                while (old_head->next &&
-                       !head_.compare_exchange_weak(old_head, old_head->next,
-                                                    std::memory_order_acq_rel));
-                hazardPtr->store(nullptr, std::memory_order_release);
-                if (!old_head->next)
+                Node* temp = nullptr;
+                do
                 {
+                    temp = old_head;
+                    hazardPtr->store(temp, std::memory_order_release);
+                    old_head = head_.load(std::memory_order_acquire);
+                }while(temp != old_head);
+
+                while (old_head->isValid.load(std::memory_order_acquire) && !head_.compare_exchange_weak(old_head, old_head->next, std::memory_order_acq_rel));
+
+                if(old_head == head_.load(std::memory_order_acquire))
+                {
+                    hazardPtr->store(nullptr, std::memory_order_release);
                     return nullptr;
                 }
+                hazardPtr->store(nullptr, std::memory_order_release);
                 size_--;
                 std::unique_ptr<T> res = std::move(old_head->data);
 
