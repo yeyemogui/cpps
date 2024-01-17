@@ -2,8 +2,8 @@
 // Created by sleepwalker on 2024/1/12.
 //
 
-#ifndef DEMO_THREADSTACKLOCKFREEV1_H
-#define DEMO_THREADSTACKLOCKFREEV1_H
+#ifndef DEMO_THREADSTACKLOCKFREEV1_BUGVERSION_H
+#define DEMO_THREADSTACKLOCKFREEV1_BUGVERSION_H
 
 #include "DataContainerBase.h"
 #include "exceptions.h"
@@ -16,7 +16,7 @@ namespace thread_pool
     namespace lock_free
     {
         template<typename T>
-        class ThreadStackLockFreeV1 : public DataContainerBase<T>
+        class ThreadStackLockFreeV1_BugVersion : public DataContainerBase<T>
         {
         private:
             struct Node
@@ -84,9 +84,9 @@ namespace thread_pool
             }
 
         public:
-            ThreadStackLockFreeV1(): head_(nullptr), size_(0), to_be_deleted_(nullptr){}
+            ThreadStackLockFreeV1_BugVersion() : head_(nullptr), size_(0), to_be_deleted_(nullptr) {}
 
-            ~ThreadStackLockFreeV1() { clear(); }
+            ~ThreadStackLockFreeV1_BugVersion() { clear(); }
 
             void push(T &&data) override {
                 auto *node = new Node();
@@ -98,6 +98,7 @@ namespace thread_pool
 
             void clear() override {
                 while (try_pop());
+                tryCleanToBeDeletedList();
             }
 
             unsigned int size() override {
@@ -111,23 +112,23 @@ namespace thread_pool
             }
 
             std::unique_ptr<DataContainerBase<T>> clone() override {
-                return std::make_unique<ThreadStackLockFreeV1<T>>();
+                return std::make_unique<ThreadStackLockFreeV1_BugVersion<T>>();
             }
 
             std::unique_ptr<T> try_pop() override {
                 Node *old_head = head_.load(std::memory_order_acquire);
                 auto *hazard_record = getHazardPtrForThread();
-                Node* temp = nullptr;
+                Node *temp = nullptr;
                 do
                 {
-                    if(!old_head)
+                    if (!old_head)
                     {
                         return nullptr;
                     }
                     temp = old_head;
                     hazard_record->store(temp, std::memory_order_release);
                     old_head = head_.load(std::memory_order_acquire);
-                }while(temp != old_head);
+                } while (temp != old_head);
 
                 while (old_head && !head_.compare_exchange_strong(old_head, old_head->next, std::memory_order_seq_cst));
                 size_.fetch_sub(1, std::memory_order_relaxed);
@@ -152,4 +153,4 @@ namespace thread_pool
         };
     } // namespace lock_free
 } // namespace thread_pool
-#endif // DEMO_THREADSTACKLOCKFREEV1_H
+#endif // DEMO_THREADSTACKLOCKFREEV1_BUGVERSION_H

@@ -21,8 +21,9 @@ add_executable(${PROJECT_NAME} main.cc
 		ThreadPool/Include/DataContainerFactory.h
 		Sort/Include/quick_sort.h
 		ThreadPool/Include/ThreadStackLocked.h
-		ThreadPool/Include/ThreadStackLockFreeV1.h
-		ThreadPool/Include/ThreadQueueLockFree.h
+		ThreadPool/Include/ThreadStackLockFreeV1_BugVersion.h
+		ThreadPool/Include/ThreadQueueLockFree_BugVersion.h
 		ThreadPool/Include/ThreadStackLockFreeV2.h
 		ThreadPool/Include/ThreadStackLockFreeV3.h
+		ThreadPool/Include/ThreadQueueLockFreeV2.h
 )

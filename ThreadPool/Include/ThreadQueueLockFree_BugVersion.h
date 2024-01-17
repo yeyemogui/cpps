@@ -2,8 +2,8 @@
 // Created by sleepwalker on 2024/1/13.
 //
 
-#ifndef DEMO_THREADQUEUELOCKFREE_H
-#define DEMO_THREADQUEUELOCKFREE_H
+#ifndef DEMO_THREADQUEUELOCKFREE_BUGVERSION_H
+#define DEMO_THREADQUEUELOCKFREE_BUGVERSION_H
 
 #include "DataContainerBase.h"
 #include "exceptions.h"
@@ -16,14 +16,13 @@ namespace thread_pool
     {
 
         template<typename T>
-        class ThreadQueueLockFree : public DataContainerBase<T>
+        class ThreadQueueLockFree_BugVersion : public DataContainerBase<T>
         {
         private:
             struct Node
             {
                 std::unique_ptr<T> data;
                 std::atomic<bool> isOperational;
-                std::atomic<bool> isValid;
                 Node *next;
 
                 Node() {
@@ -87,14 +86,15 @@ namespace thread_pool
                 }
             }
 
+
         public:
-            ThreadQueueLockFree() {
+            ThreadQueueLockFree_BugVersion() {
                 Node *node = new Node();
                 head_.store(node);
                 tail_.store(node);
             }
 
-            ~ThreadQueueLockFree() { clear(); }
+            ~ThreadQueueLockFree_BugVersion() { clear(); }
 
             void push(T &&data) override {
                 Node *new_tail = new Node();
@@ -110,7 +110,7 @@ namespace thread_pool
                     }
                     old_tail->next = new_tail;
                     old_tail->data = std::move(d);
-                    old_tail->isValid.store(true, std::memory_order_release);
+                    //old_tail->isValid.store(true, std::memory_order_release);
                     tail_.store(new_tail, std::memory_order_release);
                     size_++;
                     break;
@@ -121,42 +121,57 @@ namespace thread_pool
                 Node *old_head = head_.load(std::memory_order_acquire);
                 auto *hazardPtr = getHazardPtr();
                 Node* temp = nullptr;
+                std::unique_ptr<T> res = nullptr;
+
                 do
                 {
                     temp = old_head;
-                    hazardPtr->store(temp, std::memory_order_release);
-                    old_head = head_.load(std::memory_order_acquire);
+                    hazardPtr->store(temp, std::memory_order_seq_cst);
+                    auto old_tail = tail_.load(std::memory_order_relaxed);
+                    if(old_head == old_tail)
+                    {
+                        hazardPtr->store(nullptr, std::memory_order_seq_cst);
+                        return nullptr;
+                    }
+                    old_head = head_.load(std::memory_order_seq_cst);
                 }while(temp != old_head);
 
-                while (old_head->isValid.load(std::memory_order_acquire) && !head_.compare_exchange_weak(old_head, old_head->next, std::memory_order_acq_rel));
-
-                if(old_head == head_.load(std::memory_order_acquire))
+                if (head_.compare_exchange_strong(old_head, old_head->next, std::memory_order_acq_rel))
                 {
                     hazardPtr->store(nullptr, std::memory_order_release);
-                    return nullptr;
-                }
-                hazardPtr->store(nullptr, std::memory_order_release);
-                size_--;
-                std::unique_ptr<T> res = std::move(old_head->data);
-
-                if (isDeletable(old_head))
-                {
-                    delete old_head;
+                    size_--;
+                    res = std::move(old_head->data);
+                    if (isDeletable(old_head))
+                    {
+                        delete old_head;
+                    }
+                    else
+                    {
+                        addToBeDeleted(old_head);
+                    }
                 }
                 else
                 {
-                    addToBeDeleted(old_head);
+                    hazardPtr->store(nullptr, std::memory_order_release);
                 }
                 tryCleanToBeDeletedList();
                 return res;
             }
 
             void clear() override {
-                std::unique_ptr<function_wrapper> data;
-                do
+                while (try_pop());
+                auto *node = to_be_deleted.exchange(nullptr);
+                while (node)
                 {
-                    data = try_pop();
-                } while (data);
+                    auto *next = node->next;
+                    delete node;
+                    node = next;
+                }
+                node = tail_.load();
+                if(node)
+                {
+                    delete node;
+                }
             }
 
             unsigned int size() override { return size_.load(std::memory_order_acquire); }
@@ -167,9 +182,9 @@ namespace thread_pool
             }
 
             std::unique_ptr<DataContainerBase<T>> clone() override {
-                return std::make_unique<ThreadQueueLockFree<T>>();
+                return std::make_unique<ThreadQueueLockFree_BugVersion<T>>();
             }
         };
     } // namespace lock_free
 } // namespace thread_pool
-#endif // DEMO_THREADQUEUELOCKFREE_H
+#endif // DEMO_THREADQUEUELOCKFREE_BUGVERSION_H

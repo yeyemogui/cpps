@@ -6,7 +6,7 @@
 #include "../../Include/quick_sort.h"
 #include "../../../ThreadPool/Include/DataContainerFactory.h"
 #include <random>
-/*
+
 TEST(quick_sort_test, do_sort_test)
 {
     sort::QuickSort sorter(DataContainerFactory::create_stack_lock_freeV1());
@@ -58,11 +58,11 @@ TEST(quick_sort_test, insert_sort_test)
     }
     std::cout << std::endl;
 }
-*/
+
 TEST(quick_sort_test, normal_sort_test)
 {
-    sort::QuickSort sorter(DataContainerFactory::create_stack_lock_freeV1());
-    const auto total = 1000;
+    sort::QuickSort sorter(DataContainerFactory::create_queue_lock_freeV2(), 11);
+    const auto total = 10000;
     std::list<int> data;
     std::default_random_engine  e;
     std::uniform_int_distribution<int> u(0, total);

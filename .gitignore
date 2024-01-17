@@ -6,4 +6,4 @@
 demo
 **/CMakeCache.txt
 .DS_Store
-
+bin/**

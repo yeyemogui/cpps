@@ -80,38 +80,41 @@ namespace thread_pool
 
             std::unique_ptr<T> try_pop() override
             {
-                auto old_head = head_.load(std::memory_order_acquire);
-                RefNode updated_head;
-                do
+                for(;;)
                 {
-                    if(!old_head.core)
+                    auto old_head = head_.load(std::memory_order_acquire);
+                    RefNode updated_head;
+                    do
                     {
-                        return nullptr;
-                    }
-                    updated_head = old_head;
-                    ++updated_head.refNum;
-                }while(!head_.compare_exchange_weak(old_head, updated_head));
+                        if (!old_head.core)
+                        {
+                            return nullptr;
+                        }
+                        updated_head = old_head;
+                        ++updated_head.refNum;
+                    } while (!head_.compare_exchange_weak(old_head, updated_head));
 
-                if(head_.compare_exchange_strong(updated_head, updated_head.core->next))
-                {
-                    size_--;
-                    std::unique_ptr<T> res = std::move(updated_head.core->data);
-                    auto refNum = updated_head.refNum - 1;
-                    updated_head.core->internalRefNum.fetch_add(refNum, std::memory_order_acq_rel);
-                    if(updated_head.core->internalRefNum.load(std::memory_order_acquire) == 0)
+                    if (head_.compare_exchange_strong(updated_head, updated_head.core->next))
                     {
-                        delete updated_head.core;
+                        size_--;
+                        std::unique_ptr<T> res = std::move(updated_head.core->data);
+                        auto totalRefNum = updated_head.refNum - 1;
+                        if (updated_head.core->internalRefNum.fetch_add(totalRefNum, std::memory_order_acq_rel) ==
+                            -totalRefNum)
+                        {
+                            delete updated_head.core;
+                        }
+                        return res;
                     }
-                    return res;
-                }
-                else
-                {
-                    if(old_head.core->internalRefNum.fetch_sub(1, std::memory_order_acquire) == 1)
+                    else
                     {
-                        delete old_head.core;
+                        if (old_head.core->internalRefNum.fetch_sub(1, std::memory_order_acquire) == 1)
+                        {
+                            delete old_head.core;
+                        }
                     }
+                    return nullptr;
                 }
-                return nullptr;
             }
         };
     }
