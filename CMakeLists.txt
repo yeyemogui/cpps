@@ -26,4 +26,5 @@ add_executable(${PROJECT_NAME} main.cc
 		ThreadPool/Include/ThreadStackLockFreeV2.h
 		ThreadPool/Include/ThreadStackLockFreeV3.h
 		ThreadPool/Include/ThreadQueueLockFreeV2.h
+        Tree/Include/AvlTree.h
 )
